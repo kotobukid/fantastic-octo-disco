@@ -6,15 +6,23 @@ html(lang="ja")
     body
         if !user
             form(action="/login" method="post")
-                label
-                    span ID:
-                    input(type="text" name="id")
-                br
-                label
-                    span PASS:
-                    input(type="password" name="password")
-                br
-                input(type="submit" value="login")
+                table
+                    tr
+                        td
+                            span ID:
+                        td
+                            input(type="text" name="id")
+                    tr
+                        td
+                            span PASS:
+                        td
+                            input(type="password" name="password")
+                    tr
+                        td
+                        td
+                            input(type="submit" value="login")
+
+            span demo users: taro, jiro, saburo, hanako, yuri
         if user
             span ようこそ
             span= user.name

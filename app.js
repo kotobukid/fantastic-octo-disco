@@ -21,26 +21,27 @@ app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({extended: true})) // for parsing application/x-www-form-urlencoded
 
 app.use((req, res, next) => {
-    const name = req.cookies.name
-    if (!!name) {
-        console.log(` you are ${name}.`)
+    const sid = req.cookies.sid
+    if (!!sid) {
+        redis.hgetall(`auth:${sid}`).then((data) => {
+            if (data) {
+                req.user = data
+            }
+            next()
+        });
+    } else {
+        next();
     }
-
-    next();
 })
 
 app.get('/', (req, res) => {
-    const sid = req.cookies['sid'];
-
-    if (sid) {
-        redis.hgetall(`auth:${sid}`).then((user) => {
-            if (user) {
-                res.render('index', {user})
-            } else {
-                res.render('index', {})
-            }
-        })
+    const user = req.user;
+    if (user && user.id) {
+        console.log({user})
+        console.log('authenticated')
+        res.render('index', {user})
     } else {
+        console.log('anonymous')
         res.render('index', {})
     }
 })
@@ -53,33 +54,20 @@ app.post('/login', (req, res, next) => {
     auth.authenticate(id, password, (user) => {
         if (user) {
             const sid = Math.random().toString()
+            const key = `auth:${sid}`
+            const expires = 10; // 10秒
+            // const expires = 60 * 60 * 24 * 7;    // 1週間
 
-            redis.hmset(`auth:${sid}`, user).then(() => {
-                res.cookie('sid', sid, {})
-                // console.log({session: req.session})
-                return res.redirect('/');
+            redis.hmset(key, user).then(() => {
+                redis.expire(key, expires).then(() => {
+                    res.cookie('sid', sid, {})
+                    return res.redirect('/')
+                })
             })
         } else {
             return res.redirect('/')
         }
     })
-
-
-    // passport.authenticate('local', function (err, user, info) {
-    //     if (err) {
-    //         return next(err);
-    //     }
-    //     if (!user) {
-    //         return res.redirect('/login');
-    //     }
-    //     req.logIn(user, function (err) {
-    //         if (err) {
-    //             return next(err);
-    //         }
-    //         return res.redirect('/')
-    //     });
-    // })(req, res, next);
-
 })
 
 app.post('/', (req, res, next) => {
