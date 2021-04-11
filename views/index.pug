@@ -1,0 +1,22 @@
+doctype html
+html(lang="ja")
+    head
+        meta(charset="utf-8")
+        title TOP
+    body
+        if !user
+            form(action="/login" method="post")
+                label
+                    span ID:
+                    input(type="text" name="id")
+                br
+                label
+                    span PASS:
+                    input(type="password" name="password")
+                br
+                input(type="submit" value="login")
+        if user
+            span ようこそ
+            span= user.name
+            br
+            a(href="/logout") logout
