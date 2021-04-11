@@ -1,7 +1,7 @@
 const path = require("path")
 
 const express = require('express')
-const passport = require('passport');
+const passport = require('passport')
 const cookieParser = require('cookie-parser')
 const auth = require('./auth');
 const Redis = require('ioredis')
@@ -9,6 +9,8 @@ const Redis = require('ioredis')
 const app = express()
 const port = 3000
 const redis = new Redis()
+
+const deserialize_user = require('./middlewares/deserialize_user')(redis)
 
 app.set('views', path.join(__dirname, './views'));
 app.set('view engine', 'pug');
@@ -20,19 +22,7 @@ app.use(passport.session());
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({extended: true})) // for parsing application/x-www-form-urlencoded
 
-app.use((req, res, next) => {
-    const sid = req.cookies.sid
-    if (!!sid) {
-        redis.hgetall(`auth:${sid}`).then((data) => {
-            if (data) {
-                req.user = data
-            }
-            next()
-        });
-    } else {
-        next();
-    }
-})
+app.use(deserialize_user)
 
 app.get('/', (req, res) => {
     const user = req.user;
@@ -70,12 +60,7 @@ app.post('/login', (req, res, next) => {
     })
 })
 
-app.post('/', (req, res, next) => {
-    res.send('POST request')
-})
-
 app.get('/logout', (req, res, next) => {
-    console.log(req.cookies)
     const sid = req.cookies.sid;
     if (sid) {
         redis.del(`auth:${sid}`).then(() => {
