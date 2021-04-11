@@ -11,6 +11,7 @@ const port = 3000
 const redis = new Redis()
 
 const deserialize_user = require('./middlewares/deserialize_user')(redis)
+const generate_sid = require('./utilities/sid')(redis)
 
 app.set('views', path.join(__dirname, './views'));
 app.set('view engine', 'pug');
@@ -43,15 +44,16 @@ app.post('/login', (req, res, next) => {
 
     auth.authenticate(id, password, (user) => {
         if (user) {
-            const sid = Math.random().toString()
-            const key = `auth:${sid}`
-            const expires = 10; // 10秒
-            // const expires = 60 * 60 * 24 * 7;    // 1週間
+            generate_sid((sid) => {
+                const key = `auth:${sid}`
+                const expires = 10; // 10秒
+                // const expires = 60 * 60 * 24 * 7;    // 1週間
 
-            redis.hmset(key, user).then(() => {
-                redis.expire(key, expires).then(() => {
-                    res.cookie('sid', sid, {})
-                    return res.redirect('/')
+                redis.hmset(key, user).then(() => {
+                    redis.expire(key, expires).then(() => {
+                        res.cookie('sid', sid, {})
+                        return res.redirect('/')
+                    })
                 })
             })
         } else {
