@@ -1,9 +1,11 @@
-const socket = io()
-
+import * as io from 'socket.io-client';
+// @ts-ignore
+const socket: SocketIOClient.Socket = io.default()
+alert('!!')
 window.onload = () => {
-    const form = document.getElementById('form')
-    const input = document.getElementById('input')
-    const messages = document.getElementById('messages')
+    const form: HTMLElement = document.getElementById('form')!
+    const input: HTMLInputElement = <HTMLInputElement>document.getElementById('input')
+    const messages: HTMLElement = document.getElementById('messages')!
 
     form.addEventListener('submit', function (e) {
         e.preventDefault()
@@ -13,7 +15,7 @@ window.onload = () => {
         }
     })
 
-    socket.on('message', (msg) => {
+    socket.on('message', (msg: string) => {
         const item = document.createElement('li')
         item.textContent = msg
         messages.appendChild(item)

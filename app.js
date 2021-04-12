@@ -16,10 +16,8 @@ const generate_sid = require('./utilities/sid')(redis)
 app.set('views', path.join(__dirname, './views'))
 app.set('view engine', 'pug')
 
-// app.use(passport.initialize())
 app.use(cookieParser())
-// app.use(passport.session())
-app.use("/public", express.static(path.join(__dirname, './public')))
+app.use("/public", express.static(path.join(__dirname, './dist/public')))
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({extended: true})) // for parsing application/x-www-form-urlencoded
 
