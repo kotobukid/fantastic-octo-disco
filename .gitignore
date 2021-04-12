@@ -2,3 +2,5 @@
 /.idea/
 /dump.rdb
 /dist/
+/middlewares/*.js
+app.js

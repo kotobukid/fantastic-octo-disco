@@ -1,7 +1,7 @@
 import * as io from 'socket.io-client';
 // @ts-ignore
 const socket: SocketIOClient.Socket = io.default()
-alert('!!')
+ 
 window.onload = () => {
     const form: HTMLElement = document.getElementById('form')!
     const input: HTMLInputElement = <HTMLInputElement>document.getElementById('input')

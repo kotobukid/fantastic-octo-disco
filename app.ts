@@ -1,16 +1,21 @@
+import {NextFunction, Response} from "express";
+
+import * as socketio from 'socket.io'
+import _deserialize_user from './middlewares/deserialize_user'
+
 const path = require("path")
 const http = require('http')
 const express = require('express')
 const cookieParser = require('cookie-parser')
 const auth = require('./auth')
-const Redis = require('ioredis')
-const socketio = require("socket.io")
+import Redis = require('ioredis');
 
 const app = express()
 const port = 3000
 const redis = new Redis()
 
-const deserialize_user = require('./middlewares/deserialize_user')(redis)
+const deserialize_user = _deserialize_user(redis)
+
 const generate_sid = require('./utilities/sid')(redis)
 
 app.set('views', path.join(__dirname, './views'))
@@ -23,7 +28,7 @@ app.use(express.urlencoded({extended: true})) // for parsing application/x-www-f
 
 app.use(deserialize_user)
 
-app.get('/', (req, res) => {
+app.get('/', (req: Request & { user: { name: string, id: string, pass: string } }, res: Response) => {
     const user = req.user
     if (user && user.id) {
         console.log({user})
@@ -35,25 +40,25 @@ app.get('/', (req, res) => {
     }
 })
 
-const parse_header = (str) => {
+const parse_header = (str: string): Record<string, string> => {
     const words = str.split(';')
-    const dict = {}
+    const dict: Record<string, string> = {}
     for (let i = 0; i < words.length; i++) {
-        const [key, value] = words[i].split('=')
+        const [key, value]: string[] = words[i].split('=')
         console.log({key, value})
         dict[key.trim()] = value.trim()
     }
     return dict
 }
 
-app.post('/login', (req, res, next) => {
+app.post('/login', (req: Request & { body: { id: string, password: string } }, res: Response, next: NextFunction) => {
     console.log('LOGIN')
     const id = req.body.id.trim()
     const password = req.body.password.trim()
 
-    auth.authenticate(id, password, (user) => {
+    auth.authenticate(id, password, (user: { name: string, id: string, pass: string }) => {
         if (user) {
-            generate_sid((sid) => {
+            generate_sid((sid: string) => {
                 const key = `auth:${sid}`
                 // const expires = 10 // 10秒
                 const expires = 60 * 60 * 24 * 7    // 1週間
@@ -73,7 +78,7 @@ app.post('/login', (req, res, next) => {
     })
 })
 
-app.get('/logout', (req, res, next) => {
+app.get('/logout', (req: Request & { cookies: { sid: string } }, res: Response, next: NextFunction) => {
     const sid = req.cookies.sid
     if (sid) {
         redis.del(`auth:${sid}`).then(() => {
@@ -86,7 +91,7 @@ app.get('/logout', (req, res, next) => {
     }
 })
 
-app.get('/chat', (req, res, next) => {
+app.get('/chat', (req: Request & { user: { name: string, id: string, pass: string } }, res: Response, next: NextFunction) => {
     if (!req.user.id) {
         next('login required')
     } else {
@@ -97,24 +102,25 @@ app.get('/chat', (req, res, next) => {
 
 const options = {}
 const server = http.createServer(options, app)
-const io = socketio(server)
+// @ts-ignore
+const _io: any = socketio(server)
 
-io.on("connection", (socket) => {
-    const cookies = parse_header(socket.handshake.headers.cookie)
+_io.on("connection", (socket: socketio.Socket & { user: { name: string, id: string, pass: string } } & { handshake: { headers: { cookie: string } } }) => {
+    const cookies: Record<string, string> = parse_header(socket.handshake.headers.cookie || '')
     const sid = decodeURIComponent(cookies['sid'] || '')
 
     if (sid) {
-        redis.hgetall(`auth:${sid}`).then((user) => {
+        redis.hgetall(`auth:${sid}`).then((user: Record<string, string>) => {
             console.log('a user connected')
-            socket.user = user
+            socket.user = <{ name: string, id: string, pass: string }>user
 
             socket.on('disconnect', () => {
                 console.log('user disconnected')
             })
 
-            socket.on('chat message', (msg) => {
+            socket.on('chat message', (msg: string) => {
                 console.log('message: ' + msg)
-                io.emit('message', `${socket.user.name} 「${msg}」`)
+                _io.emit('message', `${socket.user.name} 「${msg}」`)
             })
         })
     } else {
